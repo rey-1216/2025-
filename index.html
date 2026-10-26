@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>出店オーダー管理</title>
+<!-- ▼ URLを送ったときに表示される文（LINEなど）。ここを書き換えると変わります -->
+<meta name="description" content="大学祭の出店で使う注文管理画面です。開いたら、上のタブで自分の担当（受付・厨房・渡し口）を選んでください。">
+<meta property="og:title" content="水あめくじ＆トロピカルジュース｜注文管理">
+<meta property="og:description" content="大学祭の出店で使う注文管理画面です。開いたら、上のタブで自分の担当（受付・厨房・渡し口）を選んでください。">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<!-- ▲ ここまで -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
@@ -1307,7 +1314,8 @@ td.neg{color:var(--danger);font-weight:800}
   /* ---------- 新しいデプロイへの自動切り替え ---------- */
   let updateReady=false, updateTried=false;
   function goLatest(){
-    if(viaFetch){ location.reload(); return; }
+    // GitHub Pages は数分間古いページを返すことがあるので、毎回ちがうURLで開き直して必ず最新を読む
+    if(viaFetch){ location.replace(location.pathname+"?v="+Date.now()); return; }
     const u=window.APP_URL;
     try{ if(u){ window.open(u,"_top"); return; } }catch(e){}
     try{ location.reload(); }catch(e){}
