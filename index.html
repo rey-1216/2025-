@@ -90,33 +90,46 @@ h3{font-size:14px;font-weight:800;margin:18px 0 8px;color:var(--muted)}
 /* 受付 */
 .rec{display:grid;gap:14px}
 .rec .panel{margin-bottom:0}
-/* タブレット：左に入力とお会計、右に今日の注文 */
+/* iPad・PC：左に注文の入力、右にお会計（大きめ・スクロールしても残る）。今日の注文は下に横並び */
 @media (min-width:820px){
-  .rec{grid-template-columns:1.15fr .85fr;align-items:start}
+  .rec{grid-template-columns:minmax(0,1fr) minmax(360px,420px);align-items:start}
   .p-entry{grid-column:1;grid-row:1}
-  .p-pay{grid-column:1;grid-row:2}
-  .p-orders{grid-column:2;grid-row:1 / span 2;position:sticky;top:110px;max-height:calc(100vh - 130px);overflow:auto}
-}
-/* PC：入力・お会計・今日の注文の3列 */
-@media (min-width:1200px){
-  .rec{grid-template-columns:1.25fr .9fr .95fr}
-  .p-entry{grid-column:1;grid-row:1}
-  .p-pay{grid-column:2;grid-row:1;position:sticky;top:110px}
-  .p-orders{grid-column:3;grid-row:1}
-  .keys .btn{min-height:48px;padding:8px}
-}
-/* 今日の注文の列は幅が狭いので、ボタンを内容の下に並べる */
-@media (min-width:820px){
+  .p-pay{grid-column:2;grid-row:1 / span 2;position:sticky;top:104px}
+  .p-orders{grid-column:1;grid-row:2}
+  .p-orders .rows{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
   .p-orders .row{grid-template-columns:auto 1fr;align-items:start}
   .p-orders .row .rs{grid-column:2;justify-content:flex-start}
+  .keys .btn{min-height:64px}
+  .p-pay h2{display:none}
+  .p-pay .cartlines{max-height:132px;overflow:auto}
+  /* 待ち時間は1行に小さく */
+  .wait{padding:6px 16px;margin-bottom:10px;align-items:center}
+  .wait .wv{font-size:26px}
+  .wait .wsub{font-size:12px}
 }
+/* 横向きのiPadなど、高さが低い画面ではテンキーを少し低くして確定ボタンまで1画面に収める */
+@media (min-width:820px) and (max-height:860px){
+  .keys .btn{min-height:54px;font-size:26px}
+  .rd-total strong{font-size:36px}
+  .regdisp{padding:10px 14px;margin:6px 0 8px}
+  .placebtn{min-height:60px;margin-top:8px}
+  .p-pay .cartlines{max-height:96px}
+}
+@media (min-width:1200px) and (min-height:861px){
+  .rec{grid-template-columns:minmax(0,1fr) 440px}
+  .keys .btn{min-height:70px;font-size:30px}
+  .rd-total strong{font-size:46px}
+}
+@media (min-width:1200px){ .rec{grid-template-columns:minmax(0,1fr) 440px} }
 .p-pay .cart{margin-top:0;border-top:0;padding-top:0}
+.p-pay h2{margin-bottom:6px}
 .paybar{display:none}
 @media (max-width:819px){
   .paybar{display:flex;position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:30;
     align-items:center;justify-content:space-between;gap:10px;background:var(--ink);color:var(--bg);border-radius:18px;padding:10px 10px 10px 16px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
   .paybar strong{font-size:20px}
   .paybar .btn{background:var(--mango);color:#231600}
+  .paybar.away{display:none}
 }
 .sgrid,.reggrid,.mgrid,.rec{grid-template-columns:minmax(0,1fr)}
 .sgrid>*,.reggrid>*,.mgrid>*,.rec>*{min-width:0}
@@ -134,8 +147,25 @@ h3{font-size:14px;font-weight:800;margin:18px 0 8px;color:var(--muted)}
 .cat.on .pr{color:inherit;opacity:.75}
 .cat .q{position:absolute;top:-8px;right:-6px;background:var(--mango);color:#231600;border-radius:999px;min-width:26px;height:26px;display:grid;place-items:center;font-size:14px;font-weight:800;padding:0 6px}
 .flv-hd{font-size:13px;font-weight:800;color:var(--muted);margin:4px 0 6px}
-.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
-.keys .btn{font-size:22px;padding:10px;background:var(--bg);border:1px solid var(--line)}
+/* お会計：レジの表示窓とテンキー */
+.regdisp{background:var(--ink);color:var(--bg);border-radius:18px;padding:12px 16px;margin:10px 0 10px;display:grid;gap:2px}
+.rd-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.rd-row span{font-size:14px;font-weight:700;opacity:.75}
+.rd-row strong{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.rd-total strong{font-size:40px;line-height:1.15}
+.rd-ch strong{color:var(--mango)}
+.rd-ch.short strong,.rd-ch.short span{color:#ff8a7a;opacity:1}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+
+.keys .exact{grid-row:span 2;line-height:1.3}
+.keys .zero{grid-column:span 2}
+.keys .btn{font-size:28px;min-height:60px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;font-variant-numeric:tabular-nums}
+.keys .btn:active,.bills .btn:active{background:var(--line)}
+.placebtn{font-size:22px;min-height:68px;border-radius:18px}
+.keys .btn.fn{font-size:17px;font-weight:800;background:var(--leaf-soft);padding:4px;letter-spacing:-.02em;white-space:nowrap}
+.keys .btn.bk{font-size:26px}
+@media (max-width:419px){.keys .btn.fn{font-size:14px;letter-spacing:-.06em}.keys .btn.bk{font-size:24px}}
+.p-pay .cartlines{max-height:none}
 .cathd{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:end}
 .cathd label{font-size:12px;color:var(--muted);font-weight:700;display:grid;gap:4px}
 .frow{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
@@ -156,10 +186,6 @@ h3{font-size:14px;font-weight:800;margin:18px 0 8px;color:var(--muted)}
 .sum,.cash{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0}
 .sum strong{font-size:28px;font-weight:800}
 .cash strong{font-size:20px;font-weight:800}
-.bills{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
-.bills .btn{padding:10px 6px;font-size:15px}
-.change{min-height:28px;font-size:20px;font-weight:800;text-align:right;margin-top:8px;color:var(--leaf)}
-.change.short{color:var(--danger)}
 
 /* 注文行 */
 .rows{display:grid;gap:6px}
@@ -322,6 +348,8 @@ td.neg{color:var(--danger);font-weight:800}
 .lotall{background:var(--mango-soft);color:var(--mango-ink);border-radius:16px;padding:14px;font-weight:800;display:grid;gap:10px}
 .lottag{display:inline-block;white-space:nowrap;background:var(--hib-soft);color:var(--hib-ink);font-size:12px;font-weight:800;border-radius:6px;padding:1px 6px}
 .cl small{color:var(--muted);font-weight:700}
+.ov.changed .no{color:var(--danger)}
+.ov .ovst{font-weight:800}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;font-weight:700;max-width:92vw}
 @media (prefers-reduced-motion: no-preference){
   .ticket.new{animation:pop .5s ease}
@@ -642,6 +670,7 @@ td.neg{color:var(--danger);font-weight:800}
     $("#testbar").hidden=!testMode;
     v.innerHTML=({reception:viewReception,kitchen:viewKitchen,pickup:viewPickup,sales:viewSales,menu:viewMenu})[role]();
     fresh.clear();
+    syncPaybar();
   }
 
   function cancelBtn(o){
@@ -686,7 +715,7 @@ td.neg{color:var(--danger);font-weight:800}
       </section>
       <section class="panel p-pay" id="paySec">
         <h2>お会計</h2>
-        <div class="cart">
+        <div class="cart"><div class="cartlines">
           ${lotCart.map((e,idx)=>{const c=cats.find(x=>x.id===e.cid); if(!c) return ""; const k=lotPieces(e.num);
             const fl=e.fl.map(f=>{const x=(c.flavors||[]).find(y=>y.id===f); return x?x.name:"";}).filter(Boolean);
             return `<div class="cl lotline"><span class="nm"><span class="lottag">くじ${e.num}</span> ${esc(c.name)} ${k}個${fl.length?`<small>（${esc(fl.join("・"))}）</small>`:""}</span>
@@ -698,18 +727,23 @@ td.neg{color:var(--danger);font-weight:800}
             <button class="qb" data-act="add" data-id="${i.id}" aria-label="${esc(i.name)}を1つ増やす">＋</button>
             <span class="am">${yen(i.price*i.qty)}</span></div>`).join("")}
           ${ci.length?"":`<p class="empty">商品をタップすると追加されます</p>`}
-          <div class="sum"><span>合計</span><strong>${yen(total)}</strong></div>
-          <div class="cash"><span>お預かり</span><strong>${paidStr?yen(paid):"—"}</strong></div>
+          </div>
+          <div class="regdisp" aria-live="polite">
+            <div class="rd-row rd-total"><span>合計</span><strong>${yen(total)}</strong></div>
+            <div class="rd-row"><span>お預かり</span><strong>${paidStr?yen(paid):"—"}</strong></div>
+            <div class="rd-row rd-ch${paid&&change<0?" short":""}"><span>${paid&&change<0?"不足":"おつり"}</span><strong>${paid?yen(Math.abs(change)):(total?"ちょうど":"—")}</strong></div>
+          </div>
           <div class="keys">
-            ${["1","2","3","4","5","6","7","8","9","00","0"].map(k=>`<button class="btn" data-act="key" data-v="${k}">${k}</button>`).join("")}
-            <button class="btn" data-act="key" data-v="back" aria-label="1文字消す">⌫</button>
+            ${["1","2","3"].map(k=>`<button class="btn" data-act="key" data-v="${k}">${k}</button>`).join("")}
+            <button class="btn fn bk" data-act="key" data-v="back" aria-label="1文字消す">⌫</button>
+            ${["4","5","6"].map(k=>`<button class="btn" data-act="key" data-v="${k}">${k}</button>`).join("")}
+            <button class="btn fn" data-act="pay" data-v="clear">クリア</button>
+            ${["7","8","9"].map(k=>`<button class="btn" data-act="key" data-v="${k}">${k}</button>`).join("")}
+            <button class="btn fn exact" data-act="pay" data-v="exact">ちょうど</button>
+            <button class="btn zero" data-act="key" data-v="0">0</button>
+            <button class="btn" data-act="key" data-v="00">00</button>
           </div>
-          <div class="bills" style="grid-template-columns:1fr 1fr;margin-top:6px">
-            <button class="btn" data-act="pay" data-v="exact">ちょうど</button>
-            <button class="btn" data-act="pay" data-v="clear">金額をクリア</button>
-          </div>
-          <div class="change${paid&&change<0?" short":""}">${paid? (change>=0?`おつり ${yen(change)}`:`あと ${yen(-change)} 足りません`) : ""}</div>
-          <button class="btn primary big" data-act="place" ${canPlace?"":"disabled"}>${busy?"送信中…":(paid===0&&total>0?"注文を確定（ちょうど）":"注文を確定")}</button>
+          <button class="btn primary big placebtn" data-act="place" ${canPlace?"":"disabled"}>${busy?"送信中…":(paid===0&&total>0?"注文を確定（ちょうど）":"注文を確定")}</button>
           ${ci.length?`<button class="btn ghost" style="margin-top:8px;width:100%" data-act="clearcart">入力をやり直す</button>`:""}
         </div>
       </section>
@@ -1052,9 +1086,10 @@ td.neg{color:var(--danger);font-weight:800}
   /* ---------- 番号表示 ---------- */
   function showOverlay(o){
     const l=$("#layer");
+    l.querySelectorAll(".overlay").forEach(x=>x.remove());
     const d=document.createElement("div");
-    d.className="overlay"; d.setAttribute("role","dialog"); d.setAttribute("aria-label","注文番号");
-    d.innerHTML=`<div class="ov"><div class="l">番号札</div><div class="no">${noLabel(o)}</div><div class="it">この番号札をお渡しください</div>${o.test?`<div class="it">テストの注文（売上に入りません）</div>`:""}
+    d.className="overlay"; d.setAttribute("role","dialog"); d.setAttribute("aria-label","注文番号"); d.dataset.oid=o.id;
+    d.innerHTML=`<div class="ov"><div class="l">番号札</div><div class="no">${noLabel(o)}</div><div class="it ovst">${o.pending?"保存中…":"この番号札をお渡しください"}</div>${o.test?`<div class="it">テストの注文（売上に入りません）</div>`:""}
       <div class="it">${itemsText(o)}</div>
       <div class="ch">${o.change>0?"おつり "+yen(o.change):"おつりなし"}</div>
       <button class="btn primary big" data-act="closeov">次の注文へ</button></div>`;
@@ -1062,21 +1097,67 @@ td.neg{color:var(--danger);font-weight:800}
     const b=d.querySelector("button"); if(b) b.focus();
   }
 
+  function confirmOverlay(tmp,real){
+    const d=document.querySelector('.overlay[data-oid="'+tmp.id+'"]');
+    if(!d) { if(real&&real.no!==tmp.no) toast("番号札が "+noLabel(real)+" に変わりました（"+noLabel(tmp)+" ではありません）"); return; }
+    const st=d.querySelector(".ovst");
+    if(real&&real.no!==tmp.no){
+      d.querySelector(".no").textContent=noLabel(real);
+      d.querySelector(".ov").classList.add("changed");
+      if(st) st.textContent="番号が変わりました。この番号札をお渡しください";
+    } else if(st) st.textContent="この番号札をお渡しください";
+  }
+  function failOverlay(tmp){
+    const d=document.querySelector('.overlay[data-oid="'+tmp.id+'"]'); if(d) d.remove();
+  }
+
+  // スマホ：お会計が画面に見えている間は、下の「お会計へ」バーを隠す
+  function syncPaybar(){
+    const bar=document.querySelector(".paybar"), sec=document.getElementById("paySec");
+    if(!bar||!sec) return;
+    bar.classList.toggle("away", sec.getBoundingClientRect().top < window.innerHeight*0.75);
+  }
+  window.addEventListener("scroll",syncPaybar,{passive:true});
+  window.addEventListener("resize",syncPaybar);
+
   /* ---------- 操作 ---------- */
   function arm(key){ armed=key; clearTimeout(armTimer); armTimer=setTimeout(()=>{armed=null;render();},4000); render(); }
 
-  async function place(){
-    if(busy) return;
+  // サーバーと同じ決め方で、次の番号札を予想する（1〜枚数をくり返す。まだ渡していない番号は飛ばす）
+  function predictNo(day,test){
+    const list=orders.filter(o=>o.day===day&&!!o.test===!!test&&!o.paper);
+    const inUse=new Set(list.filter(o=>o.status==="cooking"||o.status==="ready").map(o=>Number(o.no)));
+    const lastNo=list.length?Number(list[list.length-1].no)||0:0;
+    if(!tagCount) return Math.max(0,...list.map(o=>Number(o.no)||0))+1;
+    for(let i=1;i<=tagCount;i++){ const c=((lastNo+i-1)%tagCount)+1; if(!inUse.has(c)) return c; }
+    return null;
+  }
+
+  // 確定を押したらすぐに番号を出し、サーバーへの保存は後ろで行う
+  function place(){
     const items=cartItems(); if(!items.length) return;
     const total=cartTotal(); const p=getPaid()||total; if(p<total) return;
-    busy=true; render();
-    try{
-      const res=await api("addOrder",items,p);
-      cart={}; lotCart=[]; lotPick=null; paidStr=""; selCat=null;
-      applyState(res.state); showOverlay(res.order);
-    }
-    catch(e){ handleErr(e); }
-    finally{ busy=false; render(); }
+    const t=today(), no=predictNo(t,testMode);
+    if(no==null){ toast("番号札がすべて使用中です。受け渡しが終わるまで待ってください"); return; }
+    const saved={cart:Object.assign({},cart),lotCart:lotCart.slice(),paidStr:paidStr};
+    const tmpItems=JSON.parse(JSON.stringify(items));
+    tmpItems.forEach(i=>{ if(i.lotTicket&&i.round==null) i.round=lotRound; });   // 保存中も、その番号は「出た」扱いにする
+    const tmp={id:"tmp"+Date.now(),no:no,day:t,items:tmpItems,total:total,paid:p,change:p-total,
+      status:"cooking",createdAt:now(),test:testMode,pending:true};
+    orders=orders.concat([tmp]);
+    cart={}; lotCart=[]; lotPick=null; paidStr=""; selCat=null;
+    showOverlay(tmp); render();
+    writing++; writeSeq++;
+    wq=wq.then(()=>api("addOrder",items,p)).then(res=>{
+      if(writing<=1) applyState(res.state);
+      else if(res.state&&res.state.ver) ver=String(Math.max(Number(ver)||0,Number(res.state.ver)));
+      confirmOverlay(tmp,res.order);
+    }).catch(e=>{
+      orders=orders.filter(o=>o!==tmp);
+      failOverlay(tmp);
+      if(!Object.keys(cart).length&&!lotCart.length){ cart=saved.cart; lotCart=saved.lotCart; paidStr=saved.paidStr; }
+      handleErr(e); render();
+    }).finally(()=>{ writing--; });
   }
 
   document.addEventListener("click",(e)=>{
@@ -1380,7 +1461,7 @@ td.neg{color:var(--danger);font-weight:800}
   else {
     poll(true);
     checkBuild();
-    setInterval(()=>poll(false),1500);
+    setInterval(()=>poll(false),1000);
     setInterval(checkBuild,30000);
     setInterval(tryUpdate,3000);
     document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ poll(true); checkBuild(); } });
