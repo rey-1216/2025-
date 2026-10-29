@@ -239,6 +239,15 @@ tfoot td{font-weight:800}
 .updbar[hidden]{display:none}
 .updbar .btn{background:#fff;color:var(--leaf);min-height:36px;padding:6px 14px}
 .testbar{background:var(--mango);color:#231600;font-weight:800;font-size:13px;text-align:center;padding:4px 12px}
+.sound.stest{color:var(--ink)}
+.sound.stest.need{background:var(--hib);color:#fff;border-color:var(--hib)}
+.brand .right{justify-content:flex-end;flex-shrink:0}
+@media (max-width:599px){
+  #clock{display:none}
+  .brand h1{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .brand .right{gap:6px}
+  .sound{padding:4px 8px}
+}
 .waitchip{display:none}
 @media (min-width:820px){
   .waitchip:not([hidden]){display:inline-block;background:var(--mango-soft);color:var(--mango-ink);font-weight:800;font-size:14px;border-radius:999px;padding:4px 12px}
@@ -402,7 +411,7 @@ td.neg{color:var(--danger);font-weight:800}
 <header class="top">
   <div class="brand">
     <h1 id="appTitle">水あめくじ＆トロピカルジュース</h1>
-    <div class="right"><span id="waitChip" class="waitchip" hidden></span><span id="clock"></span><button class="sound" id="sound" data-act="sound" aria-pressed="true">通知音 ON</button></div>
+    <div class="right"><span id="waitChip" class="waitchip" hidden></span><span id="clock"></span><button class="sound stest" id="stest" data-act="stest">音テスト</button><button class="sound" id="sound" data-act="sound" aria-pressed="true">通知音 ON</button></div>
   </div>
   <nav class="tabs" id="tabs" role="tablist"></nav>
 </header>
@@ -445,10 +454,17 @@ td.neg{color:var(--danger);font-weight:800}
   /* ---------- 音 ---------- */
   let actx=null;
   document.addEventListener("pointerdown",()=>{
-    try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended") actx.resume(); }catch(e){}
+    try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==="suspended") actx.resume().then(soundLabel,soundLabel); else setTimeout(soundLabel,50); }catch(e){}
   },{passive:true});
-  function beep(freq,times){
-    if(!soundOn) return;
+  function audioReady(){ return !!(actx&&actx.state==="running"); }
+  // 厨房・渡し口で、まだ一度もタップしていない（音が出せない）ときは目立たせる
+  function soundLabel(){
+    const st=document.getElementById("stest"); if(!st) return;
+    const need=soundOn&&(role==="kitchen"||role==="pickup")&&!audioReady();
+    st.textContent=need?(innerWidth<600?"🔈 音を有効に":"🔈 タップして音を有効に"):"音テスト"; st.classList.toggle("need",need);
+  }
+  function beep(freq,times,force){
+    if(!soundOn&&!force) return;
     try{ if(navigator.vibrate) navigator.vibrate(200); }catch(e){}
     if(!actx) return;
     for(let i=0;i<times;i++){
@@ -698,6 +714,7 @@ td.neg{color:var(--danger);font-weight:800}
     pendingRender=false;
     const d=new Date(); $("#clock").textContent=d.getHours()+":"+pad(d.getMinutes());
     const s=$("#sound"); s.setAttribute("aria-pressed",String(soundOn)); s.textContent=soundOn?"通知音 ON":"通知音 OFF";
+    soundLabel();
     $("#tabs").innerHTML=ROLES.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${k===role}" data-act="role" data-v="${k}">${l}${badge(k)}</button>`).join("");
     const v=$("#view");
     if(dbState==="none"){
@@ -1239,6 +1256,17 @@ td.neg{color:var(--danger);font-weight:800}
       case "tapall": tapAll=!tapAll; lsSet("stall-tapall",tapAll?"on":"off"); render(); break;
       case "paper": editing={id:null,paper:true,items:[],time:""}; eCat=null; render(); window.scrollTo(0,0); break;
       case "sound": soundOn=!soundOn; lsSet("stall-sound",soundOn?"on":"off"); render(); break;
+      case "stest": {
+        try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+        const go=()=>{
+          if(!audioReady()){ toast("音を出せませんでした。消音モードや音量を確認してください"); render(); return; }
+          beep(880,1,true); setTimeout(()=>beep(660,2,true),600);
+          toast(soundOn?"ピッ（厨房：新しい注文）→ ピピッ（渡し口：完成）が鳴れば大丈夫です":"テスト音を鳴らしました。今は通知音がOFFなので、注文が来ても鳴りません");
+          render();
+        };
+        if(actx&&actx.state!=="running"&&actx.resume) actx.resume().then(go,go); else go();
+        break;
+      }
       case "add": cart[id]=(cart[id]||0)+1; render(); break;
       case "dec": cart[id]=Math.max(0,(cart[id]||0)-1); if(!cart[id]) delete cart[id]; render(); break;
       case "clearcart": cart={}; lotCart=[]; lotPick=null; paidStr=""; selCat=null; render(); break;
