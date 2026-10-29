@@ -3,7 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- ▼ この画面のバージョン。新しいファイルを置くたびに変わる（自動更新の判定に使う） -->
+<meta name="app-build" content="2026-10-29 12:10">
 <title>出店オーダー管理</title>
+<!-- ▼ ホーム画面に追加（Webアプリ）用の設定とアイコン -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="水あめくじ">
+<meta name="theme-color" content="#eef6f3">
 <!-- ▼ URLを送ったときに表示される文（LINEなど）。ここを書き換えると変わります -->
 <meta name="description" content="大学祭の出店で使う注文管理画面です。開いたら、上のタブで自分の担当（受付・厨房・渡し口）を選んでください。">
 <meta property="og:title" content="水あめくじ＆トロピカルジュース｜注文管理">
@@ -442,6 +453,8 @@ td.neg{color:var(--danger);font-weight:800}
   let tapAll=lsGet("stall-tapall")!=="off";
   let lastTap=0;
   let dbState="loading", ver=null, polling=false, clockSkew=0;
+  // この画面自身のバージョン（<meta name="app-build">）
+  const BUILD=(document.querySelector('meta[name="app-build"]')||{}).content||"";
   const DEFAULT_TITLE="水あめくじ＆トロピカルジュース";
   let appTitle="";
   let orders=[], adjs=[], regs=[], moves=[], cats=[], lotRound=1, lotMax=70, lotCart=[], lotPick=null, defaultMin=3, testMode=false, tagCount=18, writeSeq=0, editing=null, eCat=null;
@@ -1145,6 +1158,12 @@ td.neg{color:var(--danger);font-weight:800}
       <p class="note">番号は1〜${tagCount||"∞"}をくり返して使います。まだ受け渡していない番号は飛ばします。すべて使用中のときは、受け渡しが終わるまで注文を確定できません。0にすると制限なしの連番になります。</p>
     </section>
     <section class="panel">
+      <h2>画面のバージョン</h2>
+      <p class="empty">今の画面：<strong>${esc(BUILD||"不明")}</strong></p>
+      <button class="btn" data-act="update">最新の画面に読み直す</button>
+      <p class="note">GitHub に新しいファイルを置くと、各端末は30秒ほどで自動的に切り替わります（入力中は終わるまで待ちます）。バージョンの日時が変わっていなければ、まだ切り替わっていません。</p>
+    </section>
+    <section class="panel">
       <h2>待ち時間の目安</h2>
       <div class="inline">1件あたり <input class="in" type="number" inputmode="numeric" min="1" max="30" id="defMin" value="${defaultMin}" aria-label="1件あたりの分数"> 分</div>
       <p class="note">その日の完成が3件たまるまではこの値で計算し、その後は実際にかかった時間から自動で計算します。</p>
@@ -1513,8 +1532,6 @@ td.neg{color:var(--danger);font-weight:800}
     try{ location.reload(); }catch(e){}
   }
   // GitHub Pages：このページ自身をもう一度読み込んで、中身が変わっていたら新しいバージョン
-  let pageSig=null;
-  function sig(t){ let x=0; for(let i=0;i<t.length;i++){ x=(x*31+t.charCodeAt(i))|0; } return t.length+":"+x; }
   async function pageText(){
     const r=await fetch(location.pathname+"?v="+Date.now(),{cache:"no-store",credentials:"omit"});
     if(!r.ok) throw new Error(); return r.text();
@@ -1529,25 +1546,40 @@ td.neg{color:var(--danger);font-weight:800}
     $("#updbar").hidden=false;
     if(!updateTried&&safeToReload()){ updateTried=true; goLatest(); }
   }
+  // GitHub にある最新の index.html を読んで、バージョンが自分と違えば新しいものに切り替える
   async function checkBuild(){
-    if(viaFetch){
-      if(updateReady||location.protocol==="file:") return;
-      try{ const s=sig(await pageText()); if(pageSig==null) pageSig=s; else if(s!==pageSig){ updateReady=true; tryUpdate(); } }catch(e){}
+    if(location.hostname==="script.google.com"||location.hostname.endsWith("googleusercontent.com")){
+      if(!hasGAS()||!window.APP_BUILD||updateReady) return;
+      try{ const b=await api("getBuild"); if(b&&b!==window.APP_BUILD){ updateReady=true; tryUpdate(); } }catch(e){}
       return;
     }
-    if(!hasGAS()||!window.APP_BUILD||updateReady) return;
-    try{ const b=await api("getBuild"); if(b&&b!==window.APP_BUILD){ updateReady=true; tryUpdate(); } }catch(e){}
+    if(updateReady||location.protocol==="file:"||!BUILD) return;
+    try{
+      const m=(await pageText()).match(/<meta name="app-build" content="([^"]*)"/);
+      const latest=m&&m[1];
+      if(!latest||latest===BUILD) return;
+      // 同じバージョンへの切り替えは3回まで（GitHub側の反映待ちで、何度も読み直し続けないように）
+      let tries=0; try{ tries=Number(sessionStorage.getItem("upd:"+latest))||0; }catch(e){}
+      if(tries>=3) return;
+      try{ sessionStorage.setItem("upd:"+latest,String(tries+1)); }catch(e){}
+      updateReady=true; tryUpdate();
+    }catch(e){}
   }
+
+
+  // 開いた直後と、30秒ごと・画面に戻ったときに新しいバージョンを確認（つながっていなくても確認する）
+  checkBuild();
+  setInterval(checkBuild,30000);
+  setInterval(tryUpdate,3000);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkBuild(); });
+  window.addEventListener("pageshow",(e)=>{ if(e.persisted) checkBuild(); });
 
   loadConfig().then(()=>{
   if(!hasGAS()){ dbState="none"; render(); }
   else {
     poll(true);
-    checkBuild();
     setInterval(()=>poll(false),1000);
-    setInterval(checkBuild,30000);
-    setInterval(tryUpdate,3000);
-    document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ poll(true); checkBuild(); } });
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) poll(true); });
   }
   });
 })();
