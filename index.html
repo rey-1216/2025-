@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- ▼ この画面のバージョン。新しいファイルを置くたびに変わる（自動更新の判定に使う） -->
-<meta name="app-build" content="2026-10-29 19:10">
+<meta name="app-build" content="2026-10-30 00:40">
 <title>friends レジシステム</title>
 <!-- ▼ ホーム画面に追加（Webアプリ）用の設定とアイコン -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -180,6 +180,7 @@ h3{font-size:14px;font-weight:800;margin:18px 0 8px;color:var(--muted)}
   .row .rno{min-width:44px;height:44px;font-size:20px}
 }
 .row .rs{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.btn.sm{padding:7px 11px;font-size:.88rem;min-height:36px}
 .row.st-cooking .rno{background:var(--mango);color:#231600}
 .row.st-ready .rno{background:var(--hib);color:#fff}
 .row.st-done .rno{background:var(--leaf);color:#fff}
@@ -421,7 +422,7 @@ td.neg{color:var(--danger);font-weight:800}
 <body>
 <header class="top">
   <div class="brand">
-    <h1 id="appTitle">水あめくじ＆トロピカルジュース</h1>
+    <h1 id="appTitle">friends レジシステム</h1>
     <div class="right"><span id="waitChip" class="waitchip" hidden></span><span id="clock"></span><button class="sound stest" id="stest" data-act="stest">音テスト</button><button class="sound" id="sound" data-act="sound" aria-pressed="true">通知音 ON</button></div>
   </div>
   <nav class="tabs" id="tabs" role="tablist"></nav>
@@ -452,10 +453,12 @@ td.neg{color:var(--danger);font-weight:800}
   let soundOn=lsGet("stall-sound")!=="off";
   let tapAll=lsGet("stall-tapall")!=="off";
   let lastTap=0;
-  let dbState="loading", ver=null, polling=false, clockSkew=0;
+  let synced=false, dbState="loading", ver=null, polling=false, clockSkew=0;
   // この画面自身のバージョン（<meta name="app-build">）
   const BUILD=(document.querySelector('meta[name="app-build"]')||{}).content||"";
-  const DEFAULT_TITLE="水あめくじ＆トロピカルジュース";
+  const DEFAULT_TITLE="friends レジシステム";
+  // 前回の表示名を、データが届く前から出しておく
+  { const t0=lsGet("stall-title")||DEFAULT_TITLE; const el=document.getElementById("appTitle"); if(el) el.textContent=t0; document.title=t0; }
   let appTitle="";
   let orders=[], adjs=[], regs=[], moves=[], cats=[], lotRound=1, lotMax=70, lotCart=[], lotPick=null, defaultMin=3, testMode=false, tagCount=18, writeSeq=0, editing=null, eCat=null;
   const loaded={orders:false,menu:false};
@@ -575,8 +578,10 @@ td.neg{color:var(--danger);font-weight:800}
     if(!s) return;
     if(s.serverNow) clockSkew=s.serverNow-Date.now();
     // 古い状態（自分の書き込みより前に読まれたもの）は使わない
-    if(ver&&s.ver&&Number(s.ver)<Number(ver)) return;
-    if(s.unchanged){ ver=s.ver; return; }
+    // （開いた直後の最初の返事は、控えより古く見えても必ず使う）
+    if(synced&&ver&&s.ver&&Number(s.ver)<Number(ver)) return;
+    if(!s.fromCache) synced=true;
+    if(s.unchanged){ ver=s.ver; if(dbState!=="ok"){ dbState="ok"; scheduleRender(); } return; }
     ver=s.ver;
     if(s.delta){
       // 変わった注文だけが届いた：同じ注文は置き換え、新しい注文は後ろに足す
@@ -586,7 +591,7 @@ td.neg{color:var(--danger);font-weight:800}
     }
     tagCount=s.tagCount==null?18:Number(s.tagCount);
     appTitle=String(s.title||"").trim();
-    { const tt=appTitle||DEFAULT_TITLE; const el=document.getElementById("appTitle"); if(el&&el.textContent!==tt) el.textContent=tt; document.title=tt; }
+    { const tt=appTitle||DEFAULT_TITLE; const el=document.getElementById("appTitle"); if(el&&el.textContent!==tt) el.textContent=tt; document.title=tt; lsSet("stall-title",tt); }
     if(s.lottery){ lotRound=Number(s.lottery.round)||1; lotMax=Number(s.lottery.max)||70; }
     orders=s.orders||[];
     adjs=s.adjustments||[];
@@ -599,8 +604,25 @@ td.neg{color:var(--danger);font-weight:800}
     Object.keys(cart).forEach(k=>{ const r=lookup(k); if(!r||(r.fl&&r.fl.soldOut)) delete cart[k]; });
     if(selCat&&!cats.some(c=>c.id===selCat)) selCat=null;
     loaded.orders=true; loaded.menu=true;
-    if(dbState!=="ok"){ dbState="ok"; }
+    if(!s.fromCache){ dbState="ok"; saveCacheSoon(); }
+    else if(dbState!=="ok") dbState="cached";
     notify(); scheduleRender();
+  }
+  /* 開いた直後に前回のデータを表示しておくための控え（この端末の中だけに保存）
+     サーバーから最新が届くまでの数秒も画面が出るので、開くのが速く感じる */
+  const cacheKey=()=>"stall-cache:"+API_URL;
+  let cacheTimer=null;
+  function saveCacheSoon(){
+    if(cacheTimer||!API_URL) return;
+    cacheTimer=setTimeout(()=>{ cacheTimer=null;
+      try{ localStorage.setItem(cacheKey(),JSON.stringify({ver:ver,tagCount:tagCount,title:appTitle,lottery:{round:lotRound,max:lotMax},
+        orders:orders,adjustments:adjs,registers:regs,cashMoves:moves,cats:cats,defaultMin:defaultMin,testMode:testMode})); }
+      catch(e){ try{ localStorage.removeItem(cacheKey()); }catch(_){} }
+    },3000);
+  }
+  function restoreCache(){
+    try{ const c=JSON.parse(localStorage.getItem(cacheKey())||"null"); if(c&&c.ver&&Array.isArray(c.orders)){ c.fromCache=true; applyState(c); return true; } }catch(e){}
+    return false;
   }
   let wq=Promise.resolve();
   let writing=0;
@@ -621,12 +643,12 @@ td.neg{color:var(--danger);font-weight:800}
     cats=cs; defaultMin=dm; render();
     return q(()=>api("saveMenu",cs,dm,!!seed));
   }
-  async function poll(force){
+  async function poll(force,useKnown){
     if(polling||!hasGAS()||((writing||regPending)&&!force)) return;
     if(!force&&document.hidden) return;
     polling=true;
     const seq=writeSeq;
-    try{ const s=await api("getState",force?null:ver); if(seq===writeSeq&&!writing&&!regPending) applyState(s); offline(false); }
+    try{ const s=await api("getState",(force&&!useKnown)?null:ver); if(seq===writeSeq&&!writing&&!regPending) applyState(s); offline(false); }
     catch(e){ offline(true); }
     finally{ polling=false; }
   }
@@ -872,9 +894,9 @@ td.neg{color:var(--danger);font-weight:800}
       <section class="panel p-orders">
         <h2>今日の注文</h2>
         ${cooking.length+ready.length+done.length?`<div class="rows">
-          ${ready.map(o=>row(o,true)).join("")}
-          ${cooking.map(o=>row(o,true)).join("")}
-          ${done.map(o=>row(o,false)).join("")}
+          ${ready.map(o=>row(o,true,`<button class="btn done sm" data-act="done" data-id="${o.id}">受け渡し完了</button><button class="btn ghost sm" data-act="uncook" data-id="${o.id}">調理中に戻す</button>`)).join("")}
+          ${cooking.map(o=>row(o,true,`<button class="btn ready sm" data-act="ready" data-id="${o.id}">完成</button><button class="btn done sm" data-act="done" data-id="${o.id}">受け渡し完了</button>`)).join("")}
+          ${done.map(o=>row(o,false,`<button class="btn ghost sm" data-act="undone" data-id="${o.id}">戻す</button>`)).join("")}
         </div>`:`<p class="empty">まだ注文はありません</p>`}
       </section>
     </div>
@@ -1620,13 +1642,28 @@ td.neg{color:var(--danger);font-weight:800}
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkBuild(); });
   window.addEventListener("pageshow",(e)=>{ if(e.persisted) checkBuild(); });
 
-  loadConfig().then(()=>{
-  if(!hasGAS()){ dbState="none"; render(); }
-  else {
-    poll(true);
+  // 開き方：前回つながったURLが残っていれば、config.js を待たずにすぐ読み込みを始める
+  let started=false;
+  function startSync(){
+    if(started) return; started=true;
+    const had=restoreCache();
+    if(had) render();
+    poll(true,had);   // 控えがあれば、そこからの差分だけもらう
     setInterval(()=>poll(false),1000);
     document.addEventListener("visibilitychange",()=>{ if(!document.hidden) poll(true); });
   }
+  const savedApi=location.protocol==="file:"?"":(lsGet("stall-api")||"");
+  if(/^https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec$/.test(savedApi)){ API_URL=savedApi; viaFetch=true; startSync(); }
+  loadConfig().then(()=>{
+    if(viaFetch&&!cfgProblem){
+      if(API_URL!==savedApi){
+        lsSet("stall-api",API_URL);
+        if(started){ ver=null; synced=false; orders=[]; poll(true); }   // URLが変わったら最初から読み直す
+      }
+      if(!started) startSync();
+    } else if(!(started&&cfgProblem==="notfound")){   // 電波が悪くて config.js が読めないだけなら、前回のURLで続ける
+      viaFetch=false; dbState="none"; render();
+    }
   });
 })();
 </script>
