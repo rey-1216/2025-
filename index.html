@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- ▼ この画面のバージョン。新しいファイルを置くたびに変わる（自動更新の判定に使う） -->
-<meta name="app-build" content="2026-10-30 00:40">
+<meta name="app-build" content="2026-10-30 17:20">
 <title>friends レジシステム</title>
 <!-- ▼ ホーム画面に追加（Webアプリ）用の設定とアイコン -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -319,6 +319,7 @@ tfoot td{font-weight:800}
 td.neg{color:var(--danger);font-weight:800}
 .lothd{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:4px 0 8px;font-weight:700}
 .lothd strong{font-size:22px}
+.lotrst{margin-left:auto;align-self:center}
 .lotinfo{font-size:12px;color:var(--muted)}
 .lotgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
 @media (min-width:1200px){.lotn{min-height:44px;font-size:16px}}
@@ -740,7 +741,8 @@ td.neg{color:var(--danger);font-weight:800}
   function lotPickerHTML(c,target,blocked){
     const st=lotStatus(blocked);
     const head=`<div class="lothd"><span>くじ 残り <strong>${st.left}</strong> / ${lotMax}枚</span>
-      <span class="lotinfo">1番（3個）：${st.one?"まだ出ていない":"出た"}　7の倍数（2個）：残り${st.sevLeft}/${st.sev}</span></div>`;
+      <span class="lotinfo">1番（3個）：${st.one?"まだ出ていない":"出た"}　7の倍数（2個）：残り${st.sevLeft}/${st.sev}</span>
+      ${target==="cart"&&st.left>0&&st.left<lotMax?`<button class="btn sm ${armed==="lotreset"?"warn":"ghost"} lotrst" data-act="lotreset">${armed==="lotreset"?"本当にリセット（全部箱に戻した）":"くじをリセット"}</button>`:""}</div>`;
     if(target==="cart"&&st.left<=0&&!lotPick) return head+`<div class="lotall">くじが全部出ました。箱に戻したら、リセットしてください。
       <button class="btn ${armed==="lotreset"?"warn":"primary"}" data-act="lotreset">${armed==="lotreset"?"本当にリセット":"くじをリセット"}</button></div>`;
     const P=(lotPick&&lotPick.cid===c.id)?lotPick:{cid:c.id,nums:[],stage:"pick",fl:{}};
